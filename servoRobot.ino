@@ -274,19 +274,33 @@ void checkButtons()
 {
   int redButtonState   = digitalRead(BTN_RED);
   int blackButtonState = digitalRead(BTN_BLACK);
+  
+  ServoHndl s1 = servosH[0];
+  ServoHndl s2 = servosH[1];
+
+  static int delta1 = 10;
+  static int delta2 = 10;
 
   if( redButtonState == LOW )
   {
     Serial.println(" > RED BUTTON PRESSED");
     //delay(50);
-    moveServo(servosH[0].currentAngle+10, 0);
+    moveServo(s1.currentAngle+delta1, 0);
+    if(s1.currentAngle >= 180)
+      delta1 *= -1;
+    else if(s1.currentAngle <= 0)
+      delta1 *= -1;
   }
 
   if( blackButtonState == LOW )
   {
     Serial.println(" > BLACK BUTTON PRESSED");
-    moveServo(servosH[0].currentAngle-10, 0);
+    moveServo(s2.currentAngle+delta2, 1);
     //delay(50);
+    if(s1.currentAngle >= 180)
+      delta2 *= -1;
+    else if(s1.currentAngle <= 0)
+      delta2 *= -1;
   }
 
 }
