@@ -14,7 +14,7 @@ char strServoNum[2];
 
 #define USE_RELATIVE_VALUES 1
 #define USE_ABSOLUTE_VALUES 2
-#define SERVO_MOVEMENT USE_RELATIVE_VALUES
+char SERVO_MOVEMENT = USE_RELATIVE_VALUES;
 
 boolean newData = false;
 
@@ -199,9 +199,12 @@ void serialFlush()
   while(Serial.available())
     Serial.read();
 }
+
 // recv command from serial comm with following format:
-//    VAL-NUMSERVO;
-//    nnn-x;  6 chars
+//    CTYPEVAL#NUMSERVO;
+//      CTYPE     - command type: Relative or Absolute position - 1 or 2
+//      VAL       - new angle to move to                        - +/- -180:180
+//      NUMSERVO  - the servo to move                           - 0:3
 void serialRecvCmd(char endMarker) 
 {
   bool   commandValidated = false;
@@ -217,7 +220,9 @@ void serialRecvCmd(char endMarker)
   {
     rc = Serial.read();
 
-    if( commandValidated == false && rc != (char)(USE_RELATIVE_VALUES + '0') )
+    if( commandValidated == false 
+      && rc != (char)(USE_RELATIVE_VALUES + '0') 
+      && rc != (char)(USE_ABSOLUTE_VALUES + '0'))
     {
       Serial.print(" > Invalid command received ");
       Serial.println(rc);
@@ -225,7 +230,6 @@ void serialRecvCmd(char endMarker)
       break;
     }
     commandValidated = true;
-    // skip the command info
 
     if (rc != endMarker) 
     {
@@ -284,23 +288,25 @@ void checkButtons()
   if( redButtonState == LOW )
   {
     Serial.println(" > RED BUTTON PRESSED");
-    //delay(50);
+    if(s1.currentAngle > 170 || s1.currentAngle < 10)
+    {
+        delta1 *= -1;
+        Serial.print(" >>> delta1: "); Serial.print(delta1); Serial.print("; Servo 0 angle: "); Serial.println(s1.currentAngle);
+    }
     moveServo(s1.currentAngle+delta1, 0);
-    if(s1.currentAngle >= 180)
-      delta1 *= -1;
-    else if(s1.currentAngle <= 0)
-      delta1 *= -1;
+    delay(10);
   }
 
   if( blackButtonState == LOW )
   {
     Serial.println(" > BLACK BUTTON PRESSED");
+    if(s2.currentAngle > 170 || s2.currentAngle < 10)
+    {
+        delta2 *= -1;
+        Serial.print(" >>> delta2: "); Serial.print(delta2); Serial.print("; Servo 1 angle: "); Serial.println(s2.currentAngle);
+    }
     moveServo(s2.currentAngle+delta2, 1);
-    //delay(50);
-    if(s1.currentAngle >= 180)
-      delta2 *= -1;
-    else if(s1.currentAngle <= 0)
-      delta2 *= -1;
+    delay(10);
   }
 
 }
