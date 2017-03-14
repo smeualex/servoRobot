@@ -1,0 +1,5 @@
+{
+    "python.linting.pylintEnabled": false,
+    "arduino.serialPort": "COM5",
+    "arduino.programmer": "avr109"
+}
