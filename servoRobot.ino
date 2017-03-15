@@ -11,10 +11,11 @@ char receivedChars[numChars];
 char strNewValue[4];
 char strServoNum[2];
 
+#define COMMAND_SEPARATOR ';'
 
 #define USE_RELATIVE_VALUES 1
 #define USE_ABSOLUTE_VALUES 2
-char SERVO_MOVEMENT = USE_RELATIVE_VALUES;
+char servoMovement = USE_RELATIVE_VALUES;
 
 boolean newData = false;
 
@@ -127,7 +128,7 @@ void loop()
   if(currentMillis - previousMillis > 25)
   {
     previousMillis = currentMillis;
-    serialRecvCmd(';');
+    serialRecvCmd(COMMAND_SEPARATOR);
     serialLogRcvData();
     
     if (newData == true)
@@ -135,9 +136,9 @@ void loop()
       int newValue    = atoi(strNewValue);
       int servoNumber = atoi(strServoNum);
       
-      if( SERVO_MOVEMENT == USE_ABSOLUTE_VALUES )
+      if( servoMovement == USE_ABSOLUTE_VALUES )
         moveServo(newValue, servoNumber);
-      else if( SERVO_MOVEMENT == USE_RELATIVE_VALUES )
+      else if( servoMovement == USE_RELATIVE_VALUES )
         moveServo(servosH[servoNumber].currentAngle + newValue, servoNumber);
 
       newData = false;
@@ -230,6 +231,8 @@ void serialRecvCmd(char endMarker)
       break;
     }
     commandValidated = true;
+    if(rc == USE_ABSOLUTE_VALUES)
+      servoMovement = USE_ABSOLUTE_VALUES;
 
     if (rc != endMarker) 
     {

@@ -14,7 +14,7 @@ lastValuesSent = [9999, 9999, 9999, 9999]
 
 # commands to send
 commandsToSend = []
-SEND_MAX_NUMBER = 25
+SEND_MAX_NUMBER = 5
 
 #data sent to Arduino is relative to the current values or absolute
 CMD_RELATIVE = 1
