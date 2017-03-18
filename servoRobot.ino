@@ -1,5 +1,12 @@
 #include <Servo.h>
 
+// Enable printing of serial log msgs
+//  - to disable, simply comment the line below
+#define _PRINT_SERIAL_LOGS
+void log  (char *fmt, ...);
+void logln(char *fmt, ...);
+
+
 #define BUTTON_1_PIN 10
 #define BUTTON_2_PIN 16
 
@@ -176,7 +183,7 @@ void moveServo(const int servoAngle, const short servoNumber, const char servoMo
           servoNumber, 
           servosH[servoNumber].currentAngle, 
           newAngle);
-  Serial.println(logMsg);
+  logln(logMsg);
   
   if (newAngle >= 0 && newAngle <= 180)
   {
@@ -204,13 +211,13 @@ void moveServo(const int servoAngle, const short servoNumber, const char servoMo
     servosH[servoNumber].currentAngle = newAngle;
   }
   else
-    Serial.println("Invalid angle received");
+    logln("Invalid angle received");
 
 }
 
 void serialFlush()
 {
-  Serial.println(" >> Flushing serial input <<");
+  logln(" >> Flushing serial input <<");
   while(Serial.available())
     Serial.read();
 }
@@ -239,8 +246,8 @@ void serialRecvCmd(char endMarker)
       && rc != (char)(USE_RELATIVE_VALUES + '0') 
       && rc != (char)(USE_ABSOLUTE_VALUES + '0'))
     {
-      Serial.print(" > Invalid command received ");
-      Serial.println(rc);
+      log(" > Invalid command received ");
+      logln(rc);
       serialFlush();
       break;
     }
@@ -279,13 +286,13 @@ void serialLogRcvData()
 {
   if (newData == true) 
   {
-    Serial.print("This just in ... ");
-    Serial.print(strNewValue);
-    Serial.print(" ==> ");
-    Serial.println(strServoNum);
+    log("This just in ... ");
+    log(strNewValue);
+    log(" ==> ");
+    logln(strServoNum);
     if( atoi(strServoNum) >= NSERVOS)
     {
-      Serial.print("Invalid servo number received. ");
+      log("Invalid servo number received. ");
       newData = false;
     }
   }
@@ -304,11 +311,11 @@ void checkButtons()
 
   if( redButtonState == LOW )
   {
-    Serial.println(" > RED BUTTON PRESSED");
+    logln(" > RED BUTTON PRESSED");
     if(s1.currentAngle > 170 || s1.currentAngle < 10)
     {
         delta1 *= -1;
-        Serial.print(" >>> delta1: "); Serial.print(delta1); Serial.print("; Servo 0 angle: "); Serial.println(s1.currentAngle);
+        log(" >>> delta1: "); log(delta1); log("; Servo 0 angle: "); logln(s1.currentAngle);
     }
     moveServo(delta1, 0, USE_RELATIVE_VALUES);
     delay(10);
@@ -316,14 +323,42 @@ void checkButtons()
 
   if( blackButtonState == LOW )
   {
-    Serial.println(" > BLACK BUTTON PRESSED");
+    logln(" > BLACK BUTTON PRESSED");
     if(s2.currentAngle > 170 || s2.currentAngle < 10)
     {
         delta2 *= -1;
-        Serial.print(" >>> delta2: "); Serial.print(delta2); Serial.print("; Servo 1 angle: "); Serial.println(s2.currentAngle);
+        log(" >>> delta2: "); log(delta2); log("; Servo 1 angle: "); logln(s2.currentAngle);
     }
     moveServo(delta2, 1, USE_RELATIVE_VALUES);
     delay(10);
   }
 
+}
+
+void log(char *fmt, ...) 
+{
+#ifdef _PRINT_SERIAL_LOGS
+    va_list arg;
+    char msg[256];
+
+    va_start(arg, fmt);
+    vsprintf(msg, fmt, arg);
+    va_end(arg);
+    
+    Serial.print(msg);
+#endif
+}
+
+void logln(char *fmt, ...)
+{
+#ifdef _PRINT_SERIAL_LOGS
+    va_list arg;
+    char msg[256];
+    
+    va_start(arg, fmt);
+    vsprintf(msg, fmt, arg);
+    va_end(arg);
+    
+    Serial.println(msg);
+#endif
 }
