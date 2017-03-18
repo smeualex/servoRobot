@@ -9,7 +9,7 @@ WHITE    = ( 255, 255, 255)
 
 # controller axis mappings to servo numbers
 servoDict = { 0:0, 1:1, 3:2, 4:3 }
-s = serial.Serial('COM5', 9600)
+s = serial.Serial('COM5', 115200)
 lastValuesSent = [9999, 9999, 9999, 9999]
 
 # commands to send
@@ -27,21 +27,13 @@ def serialSend(value, servo):
     if value <=1 and val >= -1:
         return
 
-    #if value != lastValuesSent[servo]:
-    msg = " Sending servo " + str(servo) + " value " + str(value)
-    print(msg)
-    cmd = str(CMD_RELATIVE) + str(value) + '#' + str(servo)
-    
-    commandsToSend.append(cmd)
-    #print(commandsToSend)
-    if len(commandsToSend) >= SEND_MAX_NUMBER:
-        print('Sending data over serial: ' + ';'.join(commandsToSend))
-        s.write( bytes(';'.join(commandsToSend).encode('ascii')) )
-        commandsToSend[:]=[]
+    cmd = str(CMD_RELATIVE) + str(value) + '#' + str(servo) + ';'
+    print(cmd)
+    s.write( bytes(cmd.encode('ascii')) )
 
     #s.write( bytes( str(CMD_RELATIVE).encode('ascii') + str(value).encode('ascii') + '#'.encode('ascii') + str(servo).encode('ascii') + ';'.encode('ascii') ) )
     #lastValuesSent[servo] = value
-    time.sleep(0.05)
+    time.sleep(0.025)
 
 # This is a simple class that will help us print to the screen
 # It has nothing to do with the joysticks, just outputing the

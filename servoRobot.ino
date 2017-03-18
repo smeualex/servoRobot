@@ -51,7 +51,7 @@ unsigned long previousMillis = 0;
 void setup() 
 {
   short i = 0; 
-  Serial.begin(9600);
+  Serial.begin(115200);
   
   /* SET THE BUTTON PINS */
   pinMode     (BTN_RED, INPUT_PULLUP);
@@ -117,7 +117,7 @@ void setup()
 void resetServosToInitialPosition()
 {
   for( int i = 0; i < NSERVOS; i++)
-    moveServo(servosH[i].currentAngle, i);
+    moveServo(servosH[i].currentAngle, i, USE_ABSOLUTE_VALUES);
 }
 
 void loop() 
@@ -133,14 +133,7 @@ void loop()
     
     if (newData == true)
     {
-      int newValue    = atoi(strNewValue);
-      int servoNumber = atoi(strServoNum);
-      
-      if( servoMovement == USE_ABSOLUTE_VALUES )
-        moveServo(newValue, servoNumber);
-      else if( servoMovement == USE_RELATIVE_VALUES )
-        moveServo(servosH[servoNumber].currentAngle + newValue, servoNumber);
-
+      moveServo( atoi(strNewValue), atoi(strServoNum), servoMovement);
       newData = false;
     }
   }
@@ -164,29 +157,50 @@ void microMoveServo( const short servoNumber )
 }
 
 
-void moveServo(const int newAngle, const short servoNumber)
+void moveServo(const int servoAngle, const short servoNumber, const char servoMovement)
 {
   char logMsg[128] = {0, };
+  int  newAngle = 0;
 
+  if( servoMovement == USE_ABSOLUTE_VALUES )
+        newAngle = servoAngle;
+  else if( servoMovement == USE_RELATIVE_VALUES )
+        newAngle = servosH[servoNumber].currentAngle + servoAngle;
+
+  /* IGNORE a move which doesn't do anythin */
   if(servosH[servoNumber].currentAngle == newAngle)
     return;
 
-  sprintf(logMsg, "Moving servo %d from %d to %d", servoNumber, servosH[servoNumber].currentAngle, newAngle);
+  sprintf(logMsg, "[%c] Moving servo %d from %d to %d",
+          ( (servoMovement == USE_ABSOLUTE_VALUES) ? 'A' : 'R' ),
+          servoNumber, 
+          servosH[servoNumber].currentAngle, 
+          newAngle);
   Serial.println(logMsg);
+  
   if (newAngle >= 0 && newAngle <= 180)
   {
     if (newAngle < servosH[servoNumber].currentAngle)
-      for (; servosH[servoNumber].currentAngle > newAngle; servosH[servoNumber].currentAngle -= servosH[servoNumber].movementStep)
+    {
+      for (; servosH[servoNumber].currentAngle > newAngle; 
+            servosH[servoNumber].currentAngle -= servosH[servoNumber].movementStep)
       {
         servosH[servoNumber].servo.writeMicroseconds(mapAngleToMicroSeconds(servosH[servoNumber].currentAngle, servoNumber));
-        delay(servosH[servoNumber].movementDelay);
+        if(servosH[servoNumber].movementDelay)
+          delay(servosH[servoNumber].movementDelay);
       }
+    }
     else
-      for (; servosH[servoNumber].currentAngle < newAngle; servosH[servoNumber].currentAngle += servosH[servoNumber].movementStep)
+    {
+      for (; servosH[servoNumber].currentAngle < newAngle; 
+             servosH[servoNumber].currentAngle += servosH[servoNumber].movementStep)
       {
         servosH[servoNumber].servo.writeMicroseconds(mapAngleToMicroSeconds(servosH[servoNumber].currentAngle, servoNumber));
-        delay(servosH[servoNumber].movementDelay);
+        if(servosH[servoNumber].movementDelay)
+          delay(servosH[servoNumber].movementDelay);
       }
+    }
+
     servosH[servoNumber].currentAngle = newAngle;
   }
   else
@@ -296,7 +310,7 @@ void checkButtons()
         delta1 *= -1;
         Serial.print(" >>> delta1: "); Serial.print(delta1); Serial.print("; Servo 0 angle: "); Serial.println(s1.currentAngle);
     }
-    moveServo(s1.currentAngle+delta1, 0);
+    moveServo(delta1, 0, USE_RELATIVE_VALUES);
     delay(10);
   }
 
@@ -308,7 +322,7 @@ void checkButtons()
         delta2 *= -1;
         Serial.print(" >>> delta2: "); Serial.print(delta2); Serial.print("; Servo 1 angle: "); Serial.println(s2.currentAngle);
     }
-    moveServo(s2.currentAngle+delta2, 1);
+    moveServo(delta2, 1, USE_RELATIVE_VALUES);
     delay(10);
   }
 
