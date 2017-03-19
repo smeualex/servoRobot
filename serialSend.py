@@ -130,7 +130,7 @@ while done==False:
         
             # ignore values coming from axis 2
             if i != 2:
-                val = mapValue(axis*1000, 0, 1000, 0, 15)
+                val = mapValue(axis*1000, 0, 1000, 0, 20)
                 textPrint.print(screen, "mappedValue {}".format(val))
                 serialSend(val, servoDict.get(i))
                 
