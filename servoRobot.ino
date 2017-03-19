@@ -5,6 +5,13 @@
 #define _PRINT_SERIAL_LOGS
 
 
+// Enable printing of serial log msgs
+//  - to disable, simply comment the line below
+#define _PRINT_SERIAL_LOGS
+void log  (char *fmt, ...);
+void logln(char *fmt, ...);
+
+
 #define BUTTON_1_PIN 10
 #define BUTTON_2_PIN 16
 
@@ -202,7 +209,6 @@ void moveServo(const int servoAngle, const short servoNumber, const char servoMo
   }
   else
     Log.Error("Invalid angle received\n");
-
 }
 
 void serialFlush()
