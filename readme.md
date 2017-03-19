@@ -1,6 +1,7 @@
 # Servo Motor Arm
 
 ## To Do:
+0. Check [fork of logging library](https://github.com/joscha/Arduino-Log)
 1. Implement playback
 2. Use EEPROM to store data
  - implement write
