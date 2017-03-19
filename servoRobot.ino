@@ -1,17 +1,15 @@
 #include <Servo.h>
-
+#include <Logging.h>
 // Enable printing of serial log msgs
 //  - to disable, simply comment the line below
 #define _PRINT_SERIAL_LOGS
-void log  (char *fmt, ...);
-void logln(char *fmt, ...);
 
 
 #define BUTTON_1_PIN 10
 #define BUTTON_2_PIN 16
 
-#define BTN_RED   BUTTON_1_PIN
-#define BTN_BLACK BUTTON_2_PIN
+#define BTN_BLACK BUTTON_1_PIN
+#define BTN_RED   BUTTON_2_PIN
 
 const byte numChars = 64;
 char receivedChars[numChars];
@@ -38,6 +36,7 @@ struct ServoHndl
 {
 #define MAX_HIST_STEPS 25
   Servo servo;
+  bool  isMoving;
   int   servoPin;
   short currentAngle;
   
@@ -55,11 +54,12 @@ struct ServoHndl
 unsigned long currentMillis  = millis();
 unsigned long previousMillis = 0;
 
+#define LOGLEVEL LOG_LEVEL_NOOUTPUT
 void setup() 
 {
   short i = 0; 
-  Serial.begin(115200);
-  
+  //Serial.begin(115200);
+  Log.Init(LOGLEVEL, 115200L);
   /* SET THE BUTTON PINS */
   pinMode     (BTN_RED, INPUT_PULLUP);
   digitalWrite(BTN_RED, HIGH);
@@ -70,49 +70,34 @@ void setup()
   /* INITIALIZE THE SERVO MOTORS */
   for( i = 0; i < NSERVOS; i++)
   {
+    /* SERVO SPECIFIC SETTINGS          */
     switch(i)
     {
       case 0:
         servosH[i].servoPin = SERVO_PIN_0;
-        servosH[i].microMIN = 600;
-        servosH[i].microMAX = 2500;
-        servosH[i].angleMIN = 0;
-        servosH[i].angleMAX = 180;
-        servosH[i].movementDelay =  1;
-        servosH[i].movementStep = 1;
       break;
 
       case 1:
         servosH[i].servoPin = SERVO_PIN_1;
-        servosH[i].microMIN = 600;
-        servosH[i].microMAX = 2500;
-        servosH[i].angleMIN = 0;
-        servosH[i].angleMAX = 180;
-        servosH[i].movementDelay =  1;
-        servosH[i].movementStep = 1;
       break;
 
       case 2:
         servosH[i].servoPin = SERVO_PIN_2;
-        servosH[i].microMIN = 600;
-        servosH[i].microMAX = 2500;
-        servosH[i].angleMIN = 0;
-        servosH[i].angleMAX = 180;
-        servosH[i].movementDelay =  1;
-        servosH[i].movementStep = 1;
       break;
 
       case 3:
         servosH[i].servoPin = SERVO_PIN_3;
-        servosH[i].microMIN = 600;
-        servosH[i].microMAX = 2500;
-        servosH[i].angleMIN = 0;
-        servosH[i].angleMAX = 180;
-        servosH[i].movementDelay =  1;
-        servosH[i].movementStep = 1;
       break;
     }
 
+    /* COMMON SETTINGS                        */
+    servosH[i].isMoving = false;
+    servosH[i].microMIN = 600;
+    servosH[i].microMAX = 2500;
+    servosH[i].angleMIN = 0;
+    servosH[i].angleMAX = 180;
+    servosH[i].movementDelay =  1;
+    servosH[i].movementStep = 1;
     servosH[i].servo.attach(servosH[i].servoPin);
     servosH[i].currentAngle = SERVO_START_ANGLE;
     mapAngleToMicroSeconds(i, SERVO_START_ANGLE);
@@ -124,27 +109,24 @@ void setup()
 void resetServosToInitialPosition()
 {
   for( int i = 0; i < NSERVOS; i++)
-    moveServo(servosH[i].currentAngle, i, USE_ABSOLUTE_VALUES);
+    moveServo(SERVO_START_ANGLE, i, USE_ABSOLUTE_VALUES);
 }
 
 void loop() 
 {  
-  checkButtons();
-
+  handleButtonEvents();
   currentMillis  = millis();
   if(currentMillis - previousMillis > 25)
   {
     previousMillis = currentMillis;
     serialRecvCmd(COMMAND_SEPARATOR);
     serialLogRcvData();
-    
     if (newData == true)
     {
       moveServo( atoi(strNewValue), atoi(strServoNum), servoMovement);
       newData = false;
     }
   }
-  
 }
 
 float mapAngleToMicroSeconds(const int angle, const int servoNumber)
@@ -169,6 +151,13 @@ void moveServo(const int servoAngle, const short servoNumber, const char servoMo
   char logMsg[128] = {0, };
   int  newAngle = 0;
 
+  /* Current servo is currently moving   */
+  if(servosH[servoNumber].isMoving == true)
+  {
+    Log.Info("Servo %d is moving. Request to move it to %d dropped [%d]\n", servoNumber, servoAngle, servoMovement);
+    return;
+  }
+
   if( servoMovement == USE_ABSOLUTE_VALUES )
         newAngle = servoAngle;
   else if( servoMovement == USE_RELATIVE_VALUES )
@@ -178,15 +167,15 @@ void moveServo(const int servoAngle, const short servoNumber, const char servoMo
   if(servosH[servoNumber].currentAngle == newAngle)
     return;
 
-  sprintf(logMsg, "[%c] Moving servo %d from %d to %d",
-          ( (servoMovement == USE_ABSOLUTE_VALUES) ? 'A' : 'R' ),
+  Log.Info("[%s] Moving servo %d from %d to %d\n",
+          ( (servoMovement == USE_ABSOLUTE_VALUES) ? "A" : "R" ),
           servoNumber, 
           servosH[servoNumber].currentAngle, 
           newAngle);
-  logln(logMsg);
   
   if (newAngle >= 0 && newAngle <= 180)
   {
+    servosH[servoNumber].isMoving = true;
     if (newAngle < servosH[servoNumber].currentAngle)
     {
       for (; servosH[servoNumber].currentAngle > newAngle; 
@@ -209,15 +198,16 @@ void moveServo(const int servoAngle, const short servoNumber, const char servoMo
     }
 
     servosH[servoNumber].currentAngle = newAngle;
+    servosH[servoNumber].isMoving = false;
   }
   else
-    logln("Invalid angle received");
+    Log.Error("Invalid angle received\n");
 
 }
 
 void serialFlush()
 {
-  logln(" >> Flushing serial input <<");
+  Log.Debug(" >> Flushing serial input <<\n");
   while(Serial.available())
     Serial.read();
 }
@@ -246,8 +236,7 @@ void serialRecvCmd(char endMarker)
       && rc != (char)(USE_RELATIVE_VALUES + '0') 
       && rc != (char)(USE_ABSOLUTE_VALUES + '0'))
     {
-      log(" > Invalid command received ");
-      logln(rc);
+      Log.Error(" > Invalid command received [%d]\n", rc);
       serialFlush();
       break;
     }
@@ -286,79 +275,73 @@ void serialLogRcvData()
 {
   if (newData == true) 
   {
-    log("This just in ... ");
-    log(strNewValue);
-    log(" ==> ");
-    logln(strServoNum);
+    Log.Info(" RCV Data: %s ===> %s\n", strNewValue, strServoNum);
     if( atoi(strServoNum) >= NSERVOS)
     {
-      log("Invalid servo number received. ");
+      Log.Error("Invalid servo number received.\n");
       newData = false;
     }
   }
 }
 
-void checkButtons()
+void onBlackButtonPress(int buttonState)
 {
-  int redButtonState   = digitalRead(BTN_RED);
-  int blackButtonState = digitalRead(BTN_BLACK);
-  
-  ServoHndl s1 = servosH[0];
-  ServoHndl s2 = servosH[1];
-
-  static int delta1 = 10;
-  static int delta2 = 10;
-
-  if( redButtonState == LOW )
+  if( buttonState == LOW )
   {
-    logln(" > RED BUTTON PRESSED");
+    Log.Debug(" > BLACK BUTTON PRESSED\n");
+    resetServosToInitialPosition();
+  }
+}
+
+void onRedButtonPress(int buttonState)
+{
+  if( buttonState == LOW )
+  {
+    #define SRV_0 0
+    #define SRV_1 1
+    #define SRV_2 2 
+    ServoHndl s0 = servosH[SRV_0];
+    ServoHndl s1 = servosH[SRV_1];
+    ServoHndl s2 = servosH[SRV_2];
+
+    static int delta0 =  10;
+    static int delta1 =  10;
+    static int delta2 =  10;
+
+    Log.Debug(" > RED BUTTON PRESSED\n");
+
+    /*************************************************************************************/
+    /* MOVE SERVO 0                                                                      */
+    if(s0.currentAngle > 170 || s0.currentAngle < 10)
+    {
+        delta0 *= -1;
+        Log.Debug(" >>> [%d] - delta:%3.3d; angle: %3.3d;\n", SRV_0, delta0, s0.currentAngle);
+    }
+    moveServo(delta0, SRV_0, USE_RELATIVE_VALUES);
+    //delay(10);
+    /*************************************************************************************/
+    /* MOVE SERVO 1                                                                      */
     if(s1.currentAngle > 170 || s1.currentAngle < 10)
     {
         delta1 *= -1;
-        log(" >>> delta1: "); log(delta1); log("; Servo 0 angle: "); logln(s1.currentAngle);
+        Log.Debug(" >>> [%d] - delta:%3.3d; angle: %3.3d;\n", SRV_1, delta1, s1.currentAngle);
     }
-    moveServo(delta1, 0, USE_RELATIVE_VALUES);
-    delay(10);
-  }
-
-  if( blackButtonState == LOW )
-  {
-    logln(" > BLACK BUTTON PRESSED");
+    moveServo(delta1, SRV_1, USE_RELATIVE_VALUES);
+    //delay(10);
+    /*************************************************************************************/
+    /* MOVE SERVO 2                                                                      */
     if(s2.currentAngle > 170 || s2.currentAngle < 10)
     {
         delta2 *= -1;
-        log(" >>> delta2: "); log(delta2); log("; Servo 1 angle: "); logln(s2.currentAngle);
+        Log.Debug(" >>> [%d] - delta:%3.3d; angle: %3.3d;\n", SRV_2, delta0, s0.currentAngle);
     }
-    moveServo(delta2, 1, USE_RELATIVE_VALUES);
-    delay(10);
+    moveServo(delta2, SRV_2, USE_RELATIVE_VALUES);
+    //delay(10);
   }
-
 }
 
-void log(char *fmt, ...) 
+void handleButtonEvents()
 {
-#ifdef _PRINT_SERIAL_LOGS
-    va_list arg;
-    char msg[256];
-
-    va_start(arg, fmt);
-    vsprintf(msg, fmt, arg);
-    va_end(arg);
-    
-    Serial.print(msg);
-#endif
-}
-
-void logln(char *fmt, ...)
-{
-#ifdef _PRINT_SERIAL_LOGS
-    va_list arg;
-    char msg[256];
-    
-    va_start(arg, fmt);
-    vsprintf(msg, fmt, arg);
-    va_end(arg);
-    
-    Serial.println(msg);
-#endif
+  onRedButtonPress  ( digitalRead(BTN_RED   ) );
+  onBlackButtonPress( digitalRead(BTN_BLACK ) );
 }
