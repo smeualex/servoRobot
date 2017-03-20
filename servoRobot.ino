@@ -28,7 +28,7 @@ void setup()
   short i = 0; 
   //Serial.begin(115200);   --> this is called in the logger 
   Log.Init(LOGLEVEL, 115200L, AUTO_NEWLINE_ON);
-  //Log.Disable();
+  Log.Disable();
   /* SET THE BUTTON PINS */
   pinMode     (BTN_RED, INPUT_PULLUP);
   digitalWrite(BTN_RED, HIGH);
@@ -64,7 +64,7 @@ void setup()
     servosH[i].angleMIN = 0;
     servosH[i].angleMAX = 180;
     servosH[i].movementDelay =  1;
-    servosH[i].movementStep = 1;
+    servosH[i].movementStep = 5;
     servosH[i].servo.attach(servosH[i].servoPin);
     servosH[i].currentAngle = SERVO_START_ANGLE;
     mapAngleToMicroSeconds(i);
@@ -144,15 +144,18 @@ void moveServo(const int servoAngle, const short servoNumber, const char servoMo
   {
     int limit         = newAngle + ( (newAngle < servosH[servoNumber].currentAngle) ? (-1) : 1);
     int stepDirection = ( newAngle < servosH[servoNumber].currentAngle) ? (-1) : 1;
+    int step          = ( (stepDirection*(newAngle - servosH[servoNumber].currentAngle)) < servosH[servoNumber].movementStep) ? 1 : servosH[servoNumber].movementStep;
+    
     servosH[servoNumber].isMoving = true;
       for (; servosH[servoNumber].currentAngle != limit; 
-            servosH[servoNumber].currentAngle += servosH[servoNumber].movementStep * stepDirection)
+             servosH[servoNumber].currentAngle += step * stepDirection)
       {
         Log.Info("    > currentAngle = %d", servosH[servoNumber].currentAngle);
         mapAngleToMicroSeconds(servoNumber);
         microMoveServo(servoNumber);
         if(servosH[servoNumber].movementDelay)
           delay(servosH[servoNumber].movementDelay);
+         step          = ( (stepDirection*(newAngle - servosH[servoNumber].currentAngle)) < servosH[servoNumber].movementStep) ? 1 : servosH[servoNumber].movementStep;
       }
 
     servosH[servoNumber].currentAngle = newAngle;
