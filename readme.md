@@ -34,7 +34,7 @@ xBox Controller ---> PC --- Python Script ----> serial commands over USB ---> Ar
 Hardware
 =============
 
-# Parts List
+## Parts List
 - Arduino Micro Pro
 - 4 9g micro Servo Motors
 - EEPROM module - _not used at this moment_
@@ -49,9 +49,9 @@ Initially the motors were powered by a 9V battery; _don't even think of powering
 Software
 =============
 
-# Arduino Sketch
+## Arduino Sketch
 
-# Python Scripts
+## Python Scripts
 
 
 # To Do List:
